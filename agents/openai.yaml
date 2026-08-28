@@ -1,0 +1,4 @@
+interface:
+  display_name: "昆虫适合度分析"
+  short_description: "AI辅助整理昆虫原始数据并计算生命表及寄生蜂适合度指标"
+  default_prompt: "Use $analyze-insect-fitness to inspect this insect experiment workbook, propose a traceable field mapping, and run only the eligible fitness analyses."
