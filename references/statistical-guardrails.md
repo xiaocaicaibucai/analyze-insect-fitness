@@ -22,7 +22,7 @@ Keep these states distinct:
 
 For parasitoid event summaries, calculate each rate only from rows with its required numerator and denominator. Report the eligible observation count for each metric; do not fill a missing count with zero.
 
-The v1 life-table script requires complete death endpoints. Route censoring to a survival-model extension.
+The v2 life-table script requires complete death endpoints. Route censoring to a survival-model extension.
 
 ## Bootstrap interpretation
 
@@ -34,6 +34,14 @@ When any results are noncalculable, report `noncalculable_resamples` and `ci_sco
 
 Intervals from separate treatment groups are descriptive. Their overlap or non-overlap is not a treatment-difference test.
 
+When direct contrasts are requested, freeze the design before resampling:
+
+- independent treatments: resample each treatment independently;
+- matched blocks or repeated experimental runs: resample shared replicate labels together;
+- unresolved, partially matched, or nested designs: stop and use a model appropriate to that hierarchy.
+
+A percentile interval for a pairwise difference is more direct than comparing separate intervals, but it is not automatically a hypothesis test and does not control multiplicity across many treatments or metrics.
+
 ## Biological interpretation
 
 Use `r` as the main demographic fitness summary when timing matters. Report `R0`, `lambda`, and `T` as complementary quantities.
@@ -41,6 +49,8 @@ Use `r` as the main demographic fitness summary when timing matters. Report `R0`
 For parasitoids, report demographic fitness and biocontrol performance separately. More daughters, higher parasitism, and greater host killing are related but not interchangeable.
 
 For haplodiploid wasps, total offspring does not automatically equal evolutionary fitness. Sex allocation, mating opportunity, and reproductive value may require a separate model.
+
+The presence of males in a cohort file does not by itself make the Euler-Lotka growth rate sensitive to male longevity or fertility. Inspect the male-invariance diagnostic and use a mating-function model when male limitation is part of the claim.
 
 ## Reporting floor
 

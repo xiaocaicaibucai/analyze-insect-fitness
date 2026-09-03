@@ -9,7 +9,7 @@
 - 读取并检查 `.xlsx`、`.xlsm`、`.csv`、`.tsv` 原始表格。
 - 识别宽表、长表、重复表头、混合缺失值和中英文列名，生成待确认的映射草案。
 - 标准化为可追踪的 `individuals.csv`、`observations.csv`、`issues.csv` 和 `provenance.json`。
-- 由完整两性队列的 `lx-mx` 曲线计算核心指标：
+- 由完整初始队列的年龄别繁殖贡献计算 Euler–Lotka 核心指标：
   - 内禀增长率 `r`
   - 周限增长率 `lambda`
   - 净增殖率 `R0`
@@ -17,9 +17,12 @@
   - 种群倍增时间 `doubling_time`
 - 汇总寄生蜂表现：寄生率、直接致死率、总寄主影响、羽化率和雌性比例。
 - 支持按个体或生物学重复进行 Bootstrap，并保存置信区间、有效重采样比例、参数和随机种子。
+- 支持 `cohort_total`、`female_line` 和 `sexed_total` 三种明确区分的后代估计目标。
+- 输出雄性寿命不变性诊断，避免把普通 Euler–Lotka 结果误称为交配受限的两性增长模型。
+- 可按独立处理或配对生物学重复计算探索性处理差值 Bootstrap 区间。
 - 在计算前审计 `0` 与缺失值、死亡与删失、实验单位、时间起点和后代定义。
 
-当前 v1 计算两性队列的核心人口学指标，但尚不输出完整年龄—阶段两性分析中的 `s_xj`、`f_xj`、阶段重叠、生命期望或繁殖值，因此不宣称与 TWOSEX-MSChart 功能等价。
+当前 v2 的 `cohort_total` 模式兼容 Chi 文献公开的 `lx-mx` 核心方程，但尚不输出完整年龄—阶段两性分析中的 `s_xj`、`f_xj`、阶段重叠、生命期望或繁殖值，因此不宣称与 TWOSEX-MSChart 软件完全等价。
 
 ## 安装
 
@@ -112,6 +115,8 @@ python3 scripts/life_table.py \
   --observations OUTPUT_DIR/canonical/observations.csv \
   --output-dir OUTPUT_DIR/life_table \
   --confirm-unlisted-fecundity-zero \
+  --offspring-mode cohort_total \
+  --contrast-design none \
   --bootstrap-unit biological_replicate \
   --resamples 10000 \
   --seed 20260826
@@ -119,7 +124,15 @@ python3 scripts/life_table.py \
 
 `--confirm-unlisted-fecundity-zero` 是强制性的科学语义确认：只有在未列出的“个体 × 年龄”繁殖记录确实代表观察零或结构零，而不是漏测时才能传入。
 
-输出包括 `metrics.csv`、`age_table.csv` 和 `methods.json`。
+`--offspring-mode` 可选：
+
+- `cohort_total`：读取 `fecundity`，用于确认的总产卵量或总后代；
+- `female_line`：以确认的雌性个体作为分析队列并读取雌性后代；要求初始队列中每个个体的性别已确认，避免静默排除未发育至可鉴定性别的死亡个体；
+- `sexed_total`：要求同一记录同时具有雌、雄后代数，再求和。
+
+`--contrast-design` 默认为 `none`。只有确认实验设计后，才选择独立处理的 `independent` 或按相同生物学重复标签配对的 `paired_by_replicate`。
+
+输出包括 `metrics.csv`、`age_table.csv`、`male_invariance_diagnostics.csv`、`treatment_contrasts.csv` 和 `methods.json`。
 
 ### 4B. 汇总寄生蜂表现
 
@@ -150,6 +163,8 @@ canonical/
 results/
   metrics.csv
   age_table.csv 或 individual_metrics.csv
+  male_invariance_diagnostics.csv
+  treatment_contrasts.csv
   methods.json
 ```
 
@@ -160,8 +175,10 @@ results/
 - AI 可以解释上下文、提出映射和选择路线，但不能静默重定义零值、缺失、死亡、删失、实验单位、时间起点或后代类型。
 - 笼、区组、母体、队列或实验批次是独立单位时，应按生物学重复 Bootstrap，不能把其内部个体当成独立重复。
 - 不应通过比较两组各自的置信区间来宣称显著性。
+- 雄性记录出现在输入中，不代表核心 `r` 已经考虑雄性寿命、交配机会或精子限制；应检查不变性诊断。
+- 差值 Bootstrap 区间比比较两组置信区间更直接，但当前未提供零假设中心化检验或多重比较校正。
 - 只有终生总量、体型代理变量或日期含糊的数据，最多进入描述性汇总，不能凭空补成生命表。
-- v1 不覆盖矩阵种群模型、IPM、竞争选择系数、基因组时间序列、密度依赖模型或正式的处理间推断。
+- v2 不覆盖完整年龄—阶段输出、交配函数、矩阵种群模型、IPM、竞争选择系数、基因组时间序列、密度依赖模型或正式的处理间推断。
 
 详细规则见：
 
@@ -193,7 +210,9 @@ scripts/parasitoid_metrics.py   寄生蜂表现汇总
 
 - XLSX, XLSM, CSV, and TSV input profiling.
 - Canonical individual and observation records with issue and provenance logs.
-- Two-sex cohort `lx-mx` core metrics: `r`, `lambda`, `R0`, `T`, and doubling time.
+- Cohort Euler-Lotka core metrics: `r`, `lambda`, `R0`, `T`, and doubling time.
+- Explicit `cohort_total`, `female_line`, and `sexed_total` estimands.
+- Male-longevity invariance diagnostics and design-declared exploratory treatment contrasts.
 - Parasitoid metrics: parasitism, direct host killing, total host impact, emergence, and female proportion.
 - Individual- or biological-replicate bootstrap with fixed seeds and auditable method metadata.
 
@@ -214,6 +233,6 @@ $analyze-insect-fitness Profile this parasitoid workbook and prepare a mapping p
 
 The safe workflow is: profile → confirm semantics and mapping → normalize → inspect issues → route → calculate → report. Draft mappings are rejected by the normalizer, missing counts remain missing, and the bootstrap unit must match the independent experimental unit.
 
-Version 1 intentionally excludes censored-survival models, matrix or integral projection models, competition/genomic fitness inference, density-dependent models, and formal between-treatment inference.
+Version 2 intentionally excludes censored-survival models, mating-function models, matrix or integral projection models, competition/genomic fitness inference, density-dependent models, and publication-grade between-treatment inference.
 
-It is not yet a full replacement for TWOSEX-MSChart: stage-specific `s_xj`/`f_xj`, life expectancy, reproductive value, stable distributions, and population projection are outside the current implementation.
+The `cohort_total` mode follows the published Chi `lx-mx` core equations, but it is not a full replacement for TWOSEX-MSChart: stage-specific `s_xj`/`f_xj`, life expectancy, reproductive value, stable distributions, and population projection are outside the current implementation.

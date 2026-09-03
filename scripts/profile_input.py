@@ -342,7 +342,7 @@ def profile_sheet(
 
     if wide_families and {"individual_id", "treatment", "sex", "death_date"}.issubset(available) and bool(available & {"egg_date", "adult_emergence_date"}):
         layout = "wide_cohort"
-        route = "two_sex_cohort_lx_mx_core_candidate"
+        route = "cohort_euler_lotka_core_candidate"
     elif has_event_metric and has_event_time and {"individual_id", "treatment"}.issubset(available):
         layout = "event_long"
         route = "parasitoid_event_candidate"

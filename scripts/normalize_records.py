@@ -264,7 +264,7 @@ def normalize(input_file: Path, mapping_path: Path, output_dir: Path) -> int:
     observations: list[dict[str, Any]] = []
     layout = mapping.get("layout")
     if layout not in {"wide_cohort", "event_long"}:
-        raise ValueError(f"Layout {layout!r} is not supported by the v1 normalizer.")
+        raise ValueError(f"Layout {layout!r} is not supported by the v2 normalizer.")
     try:
         age_offset = int(mapping.get("age_offset", 0))
     except (TypeError, ValueError) as exc:

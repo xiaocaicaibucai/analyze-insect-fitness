@@ -1,0 +1,14 @@
+{
+  "fixture_type": "published_equation_compatibility",
+  "certification_boundary": "Checks the published Chi lx-mx equations and zero-based x+1 convention; it is not an external TWOSEX-MSChart software certification.",
+  "source": "https://doi.org/10.1127/entomologia/2022/1851",
+  "cohort_n": 2,
+  "offspring_age": 2,
+  "offspring_total": 4,
+  "expected": {
+    "R0": 2.0,
+    "r": 0.23104906018664842,
+    "lambda": 1.2599210498948732,
+    "T": 3.0
+  }
+}

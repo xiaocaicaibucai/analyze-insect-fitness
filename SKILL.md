@@ -1,6 +1,6 @@
 ---
 name: analyze-insect-fitness
-description: Inspect, map, normalize, route, calculate, and report insect fitness data from XLSX, XLSM, CSV, or TSV files. Use when Codex needs to整理昆虫或寄生蜂原始表格, reconcile wide/long/messy life-history records, propose traceable field mappings, calculate two-sex cohort lx-mx demographic metrics such as r, lambda, R0, and T, prepare data for full age-stage analysis, summarize parasitoid parasitism or host-killing performance, audit replicate and missing-value semantics, or prepare reproducible fitness-analysis outputs. Also trigger on requests mentioning 昆虫适合度、两性生命表、生命表参数、寄生蜂适合度、寄生率、寄主致死率、种群增长率、TWOSEX-MSChart 数据整理, or AI-assisted routing of insect experimental data.
+description: Inspect, map, normalize, route, calculate, and report insect fitness data from XLSX, XLSM, CSV, or TSV files. Use when Codex needs to整理昆虫或寄生蜂原始表格, reconcile wide/long/messy life-history records, propose traceable field mappings, calculate cohort Euler-Lotka metrics such as r, lambda, R0, and T under explicit offspring estimands, check Chi-style assumptions, prepare data for full age-stage analysis, summarize parasitoid performance, audit replicate and missing-value semantics, or prepare reproducible fitness-analysis outputs. Also trigger on requests mentioning 昆虫适合度、两性生命表、生命表参数、寄生蜂适合度、寄生率、寄主致死率、种群增长率、TWOSEX-MSChart 数据整理, or AI-assisted routing of insect experimental data.
 ---
 
 # Analyze Insect Fitness
@@ -24,9 +24,12 @@ Confirm the focal species or system, treatment comparison, intended meaning of f
 Distinguish these targets:
 
 - Demographic fitness: population growth from survival, development, and reproduction.
+- Chi-style cohort replacement: the published `lx-mx` core equations using the complete initial cohort.
+- Female-line replacement: population growth based on confirmed female offspring.
+- Mating-limited population growth: requires a mating or birth function and is outside the bundled core calculator.
 - Individual reproductive performance: lifetime or interval offspring contribution.
 - Parasitoid biocontrol performance: parasitism, host killing, emergence, and female offspring.
-- Relative evolutionary fitness: competition or allele-frequency change; do not analyze this in v1.
+- Relative evolutionary fitness: competition or allele-frequency change; do not analyze this in v2.
 
 Do not start formal calculation while any field that changes the analysis remains unresolved.
 
@@ -42,7 +45,7 @@ python3 scripts/profile_input.py INPUT_FILE --output-dir OUTPUT_DIR/profile
 
 For XLSX input, use a Python runtime with `openpyxl`. In Codex desktop, load workspace dependencies and prefer the bundled Python runtime. If `openpyxl` is unavailable, use the spreadsheet skill to export the relevant sheet as CSV without altering the original.
 
-Legacy `.xls` files are not read directly in v1. Convert them to `.xlsx` or CSV while preserving the original file.
+Legacy `.xls` files are not read directly in v2. Convert them to `.xlsx` or CSV while preserving the original file.
 
 Read `input_profile.json`, the sheet previews, and each draft mapping. Treat every generated mapping as a proposal, never as approval.
 
@@ -57,6 +60,8 @@ Explicitly resolve:
 - Whether time starts at egg laying, hatching, emergence, or treatment.
 - Whether reproduction means eggs, parasitized hosts, emerged offspring, daughters, or all offspring.
 - Whether sex ratio is male fraction or female fraction.
+- Whether the estimand is total eggs/offspring, sexed total offspring, or female offspring.
+- Whether male abundance, mating opportunity, or sperm limitation is part of the biological claim.
 - Whether individual identifiers are unique across sheets, batches, and treatments.
 
 Stop and ask the user when these cannot be determined from the source or study design.
@@ -91,14 +96,14 @@ Inspect `individuals.csv`, `observations.csv`, `issues.csv`, and `provenance.jso
 
 ### 6. Route the data
 
-Read [method-selection.md](references/method-selection.md). For demographic formulas, validation, interpretation, or publication-facing reporting, also read [literature-foundation.md](references/literature-foundation.md).
+Read [method-selection.md](references/method-selection.md). For demographic formulas, validation, Chi compatibility claims, interpretation, or publication-facing reporting, also read [literature-foundation.md](references/literature-foundation.md), including its methodological-debate section.
 
-Use these v1 routes:
+Use these v2 routes:
 
-- Complete cohort plus dated survival/death and age-specific fecundity → two-sex cohort `lx-mx` core analysis.
+- Complete cohort plus dated survival/death and age-specific reproduction → cohort Euler-Lotka core analysis under a confirmed offspring mode.
 - Adult parasitoid event records with offered/parasitized/killed hosts or sexed offspring → parasitoid performance summary.
 - Only lifetime totals, body size proxies, ambiguous dates, or unresolved replicate structure → descriptive output or request clarification; do not manufacture a life table.
-- Competition frequencies, MPM/IPM, Pool-seq, or genomic selection → report as outside v1 and propose a separate extension.
+- Competition frequencies, MPM/IPM, Pool-seq, or genomic selection → report as outside v2 and propose a separate extension.
 
 ### 7. Calculate only after authorization
 
@@ -110,12 +115,24 @@ python3 scripts/life_table.py \
   --observations OUTPUT_DIR/canonical/observations.csv \
   --output-dir OUTPUT_DIR/life_table \
   --confirm-unlisted-fecundity-zero \
+  --offspring-mode cohort_total \
+  --contrast-design none \
   --bootstrap-unit biological_replicate \
   --resamples 10000 \
   --seed 20260826
 ```
 
 Pass `--confirm-unlisted-fecundity-zero` only after confirming that every absent individual-age fecundity record represents an observed or structural zero rather than a missed observation. Without that explicit contract, stop before calculation.
+
+Choose exactly one offspring mode that matches the claim:
+
+- `cohort_total`: read the canonical `fecundity` field and follow the published Chi `lx-mx` core equations;
+- `female_line`: use a confirmed female-only analysis cohort and confirmed daughters; require known sex for every enrolled individual so immature deaths are not silently discarded;
+- `sexed_total`: sum female and male offspring only where both are recorded.
+
+The modes are different estimands. Do not present their estimates as interchangeable.
+
+Leave `--contrast-design none` unless the design is confirmed. Use `independent` for independently assigned treatments or `paired_by_replicate` when identical biological-replicate labels identify genuine matched blocks across treatments.
 
 For parasitoid event data:
 
@@ -132,9 +149,13 @@ Parasitoid rates use only observation rows containing every required numerator a
 
 Use individual-level bootstrap only when individuals are the independent experimental units. Use replicate-level bootstrap when cages, blocks, mothers, cohorts, or experimental runs are the independent units.
 
-Call the bundled demographic result a `two-sex cohort lx-mx core analysis`. Do not claim a full age-stage, two-sex analysis or TWOSEX-MSChart equivalence: v1 does not export `s_xj`, `f_xj`, stage overlap, `e_xj`, `v_xj`, stable distributions, or population projections.
+Call the bundled demographic result a `cohort Euler-Lotka core analysis`. `cohort_total` is compatible with the published Chi core equations, but do not claim complete TWOSEX-MSChart software parity: v2 does not export `s_xj`, `f_xj`, stage overlap, `e_xj`, `v_xj`, stable distributions, or population projections.
+
+Inspect `male_invariance_diagnostics.csv`. When `status` is `invariant`, disclose that male longevity does not enter the growth equation and do not interpret the result as a mating-limited two-sex growth rate.
 
 Treat intervals for `r`, `lambda`, or `T` as conditional when `ci_scope` says `conditional_on_calculable_resamples`. Report `noncalculable_resamples`; do not hide or impute infertile bootstrap samples. Do not use conditional intervals for treatment inference.
+
+When contrasts are enabled, report `treatment_a - treatment_b`, the contrast design, and the calculable fraction. The bundled percentile contrast interval has no null-centered p-value or multiplicity correction; treat it as exploratory unless a complete inference plan supports stronger use.
 
 ### 8. Audit and report
 
@@ -145,6 +166,7 @@ Report:
 - sample size and experimental unit;
 - estimate, confidence interval, bootstrap-calculable fraction, noncalculable count, and CI scope;
 - exact fitness definition and time unit;
+- selected offspring mode and male-invariance result;
 - missing, censored, excluded, duplicate, and unresolved records;
 - whether inference is descriptive or supports a treatment comparison;
 - all mapping, normalization, software, parameter, and random-seed metadata.
@@ -169,6 +191,8 @@ canonical/
 results/
   metrics.csv
   age_table.csv or individual_metrics.csv
+  male_invariance_diagnostics.csv
+  treatment_contrasts.csv
   methods.json
 ```
 
@@ -184,8 +208,10 @@ Pause before calculation when:
 - exclusion or reinterpretation could change the conclusion;
 - deaths and censoring cannot be distinguished;
 - offspring type or sex-ratio denominator is ambiguous;
+- offspring estimand or mating assumptions are ambiguous;
+- contrast pairing or treatment assignment is unresolved;
 - normalization still contains error-severity issues.
 
 ## Scope boundary
 
-Version 1 supports data intake, canonicalization, two-sex cohort `lx-mx` core metrics, and parasitoid event summaries. Keep full age-stage output, matrix population models, competition selection coefficients, genomic time-series inference, density-dependent models, and publication-grade treatment inference outside v1 unless the user explicitly approves an extension.
+Version 2 supports data intake, canonicalization, cohort Euler-Lotka core metrics under explicit offspring modes, male-invariance diagnostics, design-declared exploratory contrasts, and parasitoid event summaries. Keep full age-stage output, mating-function models, matrix population models, competition selection coefficients, genomic time-series inference, density-dependent models, and publication-grade treatment inference outside v2 unless the user explicitly approves an extension.

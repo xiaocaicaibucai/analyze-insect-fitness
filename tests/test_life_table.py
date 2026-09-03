@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import json
-import math
 import subprocess
 import sys
 import tempfile
@@ -12,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "life_table.py"
+GOLDEN = ROOT / "tests" / "fixtures" / "chi_equation_golden.json"
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -93,13 +93,15 @@ class LifeTableLiteratureInvariantsTest(unittest.TestCase):
     def test_zero_indexed_euler_lotka_identity(self) -> None:
         rows, methods = self.run_case(resamples=0)
         by_metric = {row["metric"]: row for row in rows}
-        expected_r = math.log(2) / 3
-        self.assertAlmostEqual(float(by_metric["R0"]["estimate"]), 2.0)
-        self.assertAlmostEqual(float(by_metric["r"]["estimate"]), expected_r, places=10)
-        self.assertAlmostEqual(float(by_metric["lambda"]["estimate"]), math.exp(expected_r), places=10)
-        self.assertAlmostEqual(float(by_metric["T"]["estimate"]), 3.0, places=10)
+        golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
+        expected = golden["expected"]
+        self.assertAlmostEqual(float(by_metric["R0"]["estimate"]), expected["R0"])
+        self.assertAlmostEqual(float(by_metric["r"]["estimate"]), expected["r"], places=10)
+        self.assertAlmostEqual(float(by_metric["lambda"]["estimate"]), expected["lambda"], places=10)
+        self.assertAlmostEqual(float(by_metric["T"]["estimate"]), expected["T"], places=10)
         self.assertEqual(by_metric["r"]["ci_scope"], "not_requested")
-        self.assertEqual(methods["analysis"], "two_sex_cohort_lx_mx_core_metrics")
+        self.assertEqual(methods["analysis"], "cohort_euler_lotka_core_metrics")
+        self.assertEqual(methods["offspring_mode"], "cohort_total")
 
     def test_noncalculable_bootstrap_samples_are_exposed(self) -> None:
         rows, _ = self.run_case(resamples=50)
