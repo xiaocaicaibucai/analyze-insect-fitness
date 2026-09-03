@@ -49,6 +49,16 @@ Legacy `.xls` files are not read directly in v2. Convert them to `.xlsx` or CSV 
 
 Read `input_profile.json`, the sheet previews, and each draft mapping. Treat every generated mapping as a proposal, never as approval.
 
+When the profile reports `chi_prepared_matrix`, read [chi-matrix.md](references/chi-matrix.md) and run:
+
+```bash
+python3 scripts/audit_chi_matrix.py INPUT_FILE \
+  --sheet SHEET_NAME \
+  --output-dir OUTPUT_DIR/chi_audit
+```
+
+This route recognizes repeated treatment blocks, `number`/`sex`/stage-duration/`adult` columns, daily fecundity cells, `N` rows, and negative duration markers as mechanical patterns only. It must not infer their biological meanings. Preserve and reconcile links to upstream raw sheets before calculation.
+
 ### 3. Review blocking ambiguities
 
 Explicitly resolve:
@@ -63,6 +73,7 @@ Explicitly resolve:
 - Whether the estimand is total eggs/offspring, sexed total offspring, or female offspring.
 - Whether male abundance, mating opportunity, or sperm limitation is part of the biological claim.
 - Whether individual identifiers are unique across sheets, batches, and treatments.
+- For prepared Chi matrices, whether `N` and negative durations encode preadult death, what every unnamed duration column means, and whether longevity rows and daily fecundity rows refer to the same individual.
 
 Stop and ask the user when these cannot be determined from the source or study design.
 

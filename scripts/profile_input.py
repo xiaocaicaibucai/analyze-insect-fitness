@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import re
 from collections import Counter, defaultdict
 from datetime import date, datetime
@@ -22,6 +23,7 @@ from _shared import (
     row_is_repeated_header,
     write_json,
 )
+from chi_matrix import detect_chi_sections
 
 
 ALIASES = {
@@ -157,7 +159,9 @@ def detect_wide_metric_families(headers: list[str]) -> list[dict[str, Any]]:
 
 
 def safe_name(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_") or "sheet"
+    readable = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_") or "sheet"
+    digest = hashlib.sha1(value.encode("utf-8")).hexdigest()[:8]
+    return f"{readable[:48]}-{digest}"
 
 
 def profile_sheet(
@@ -340,7 +344,21 @@ def profile_sheet(
                 }
             )
 
-    if wide_families and {"individual_id", "treatment", "sex", "death_date"}.issubset(available) and bool(available & {"egg_date", "adult_emergence_date"}):
+    chi_sections = detect_chi_sections(rows)
+    if chi_sections:
+        layout = "chi_prepared_matrix"
+        route = "chi_matrix_audit_required"
+        issues.append(
+            {
+                "code": "chi_prepared_matrix_detected",
+                "severity": "warning",
+                "message": (
+                    f"Detected {len(chi_sections)} prepared Chi/TWOSEX-style section(s). "
+                    "Run audit_chi_matrix.py and confirm all encoding semantics before normalization."
+                ),
+            }
+        )
+    elif wide_families and {"individual_id", "treatment", "sex", "death_date"}.issubset(available) and bool(available & {"egg_date", "adult_emergence_date"}):
         layout = "wide_cohort"
         route = "cohort_euler_lotka_core_candidate"
     elif has_event_metric and has_event_time and {"individual_id", "treatment"}.issubset(available):
@@ -371,6 +389,11 @@ def profile_sheet(
         "exclude_repeated_header": True,
         "blocking_review_required": blocking,
     }
+    if chi_sections:
+        draft["chi_matrix_sections"] = [
+            {key: value for key, value in section.items() if key != "record_rows"}
+            for section in chi_sections
+        ]
     profile = {
         "sheet": name,
         "rows": len(rows),
@@ -385,6 +408,11 @@ def profile_sheet(
         "column_profiles": columns,
         "issues": issues,
     }
+    if chi_sections:
+        profile["chi_matrix_sections"] = [
+            {key: value for key, value in section.items() if key != "record_rows"}
+            for section in chi_sections
+        ]
     return profile, draft, rows[: header_index + 1 + preview_rows]
 
 

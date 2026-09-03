@@ -8,6 +8,7 @@
 
 - 读取并检查 `.xlsx`、`.xlsm`、`.csv`、`.tsv` 原始表格。
 - 识别宽表、长表、重复表头、混合缺失值和中英文列名，生成待确认的映射草案。
+- 识别并审计分块的 Chi/TWOSEX 预整理矩阵，检查 `N`/负数编码、缺失龄期表头、逐日产卵空档及寿命—繁殖错位。
 - 标准化为可追踪的 `individuals.csv`、`observations.csv`、`issues.csv` 和 `provenance.json`。
 - 由完整初始队列的年龄别繁殖贡献计算 Euler–Lotka 核心指标：
   - 内禀增长率 `r`
@@ -82,6 +83,16 @@ python3 scripts/profile_input.py INPUT_FILE \
 ```
 
 可用 `--sheet` 只检查一个工作表。程序会输出输入画像、表格预览和每个工作表的映射草案。
+
+若画像把工作表识别为 `chi_prepared_matrix`，先运行专门审计：
+
+```bash
+python3 scripts/audit_chi_matrix.py INPUT_FILE \
+  --sheet SHEET_NAME \
+  --output-dir OUTPUT_DIR/chi_audit
+```
+
+该步骤只识别机械格式，不会擅自把 `N`、负数阶段时长、空白繁殖日或未命名阶段解释成生物学含义。
 
 ### 2. 确认映射
 
@@ -183,6 +194,7 @@ results/
 详细规则见：
 
 - [`references/canonical-schema.md`](references/canonical-schema.md)
+- [`references/chi-matrix.md`](references/chi-matrix.md)
 - [`references/mapping-contract.md`](references/mapping-contract.md)
 - [`references/method-selection.md`](references/method-selection.md)
 - [`references/statistical-guardrails.md`](references/statistical-guardrails.md)
@@ -195,6 +207,7 @@ SKILL.md                         Skill 的主工作流与停止条件
 agents/openai.yaml              Codex UI 元数据
 references/                     字段规范、映射协议和统计护栏
 scripts/profile_input.py        输入画像与映射草案
+scripts/audit_chi_matrix.py     Chi/TWOSEX 预整理矩阵审计
 scripts/normalize_records.py    确定性标准化
 scripts/life_table.py           队列生命表计算
 scripts/parasitoid_metrics.py   寄生蜂表现汇总
@@ -209,6 +222,7 @@ scripts/parasitoid_metrics.py   寄生蜂表现汇总
 ### What it supports
 
 - XLSX, XLSM, CSV, and TSV input profiling.
+- Detection and audit of repeated-block Chi/TWOSEX prepared matrices, including `N`/negative-duration conventions, unnamed stage columns, fecundity gaps, and longevity alignment.
 - Canonical individual and observation records with issue and provenance logs.
 - Cohort Euler-Lotka core metrics: `r`, `lambda`, `R0`, `T`, and doubling time.
 - Explicit `cohort_total`, `female_line`, and `sexed_total` estimands.
@@ -232,6 +246,8 @@ $analyze-insect-fitness Profile this parasitoid workbook and prepare a mapping p
 ```
 
 The safe workflow is: profile → confirm semantics and mapping → normalize → inspect issues → route → calculate → report. Draft mappings are rejected by the normalizer, missing counts remain missing, and the bootstrap unit must match the independent experimental unit.
+
+When profiling reports `chi_prepared_matrix`, run `scripts/audit_chi_matrix.py` on that worksheet before normalization. Detection identifies the mechanical layout only; it does not assign biological meanings to `N`, negative durations, blank fecundity intervals, or unnamed stages.
 
 Version 2 intentionally excludes censored-survival models, mating-function models, matrix or integral projection models, competition/genomic fitness inference, density-dependent models, and publication-grade between-treatment inference.
 
