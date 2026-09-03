@@ -307,6 +307,12 @@ def run(args: argparse.Namespace) -> None:
         }
         for metric in METRIC_ORDER:
             values = bootstrap_values.get(metric, [])
+            if args.resamples == 0:
+                ci_scope = "not_requested"
+            elif len(values) == args.resamples:
+                ci_scope = "all_resamples"
+            else:
+                ci_scope = "conditional_on_calculable_resamples"
             metric_rows.append(
                 {
                     "treatment": treatment,
@@ -316,7 +322,9 @@ def run(args: argparse.Namespace) -> None:
                     "ci_upper": quantile(values, 0.975),
                     "requested_resamples": args.resamples,
                     "calculable_resamples": len(values),
+                    "noncalculable_resamples": args.resamples - len(values),
                     "calculable_fraction": len(values) / args.resamples if args.resamples else "",
+                    "ci_scope": ci_scope,
                     "time_unit": args.time_unit,
                     "fecundity_unit": args.fecundity_unit,
                 }
@@ -333,7 +341,9 @@ def run(args: argparse.Namespace) -> None:
             "ci_upper",
             "requested_resamples",
             "calculable_resamples",
+            "noncalculable_resamples",
             "calculable_fraction",
+            "ci_scope",
             "time_unit",
             "fecundity_unit",
         ],
@@ -347,21 +357,41 @@ def run(args: argparse.Namespace) -> None:
     write_json(
         output_dir / "methods.json",
         {
-            "analysis": "cohort_age_stage_two_sex_summary",
+            "analysis": "two_sex_cohort_lx_mx_core_metrics",
+            "implementation_scope": (
+                "Uses all initial-cohort individuals to calculate lx, mx, lx*mx, R0, r, lambda, T, and "
+                "doubling time. It does not calculate full age-stage outputs such as sxj, fxj, exj, or vxj."
+            ),
             "time_origin_field": args.time_origin_field,
             "time_unit": args.time_unit,
             "fecundity_unit": args.fecundity_unit,
+            "unlisted_fecundity_is_zero": args.confirm_unlisted_fecundity_zero,
             "bootstrap_unit": args.bootstrap_unit,
             "requested_resamples": args.resamples,
             "seed": args.seed,
             "groups": group_metadata,
             "formulas": {
+                "lx": "number of initial-cohort individuals alive at age x / initial cohort size",
+                "lx_mx": "confirmed offspring produced at age x / initial cohort size",
+                "mx": "lx_mx / lx when lx > 0",
                 "R0": "sum(lx * mx)",
                 "r": "root of sum(exp(-r * (x + 1)) * lx * mx) = 1",
                 "lambda": "exp(r)",
                 "T": "log(R0) / r when r is non-zero",
                 "doubling_time": "log(2) / r when r > 0",
             },
+            "age_index_convention": "x begins at 0; the discrete Euler-Lotka exponent uses x + 1",
+            "bootstrap_interval": "2.5th and 97.5th percentiles of finite/calculable bootstrap estimates",
+            "noncalculable_policy": (
+                "Noncalculable results are counted against requested resamples and are not imputed. "
+                "Intervals are conditional when ci_scope is conditional_on_calculable_resamples."
+            ),
+            "literature_basis": [
+                "https://doi.org/10.1093/ee/17.1.26",
+                "https://doi.org/10.1127/entomologia/2020/0936",
+                "https://doi.org/10.1111/jen.12002",
+                "https://doi.org/10.1127/entomologia/2022/1653",
+            ],
             "inputs": {
                 "individuals": str(individual_path),
                 "individuals_sha256": file_sha256(individual_path),
@@ -369,7 +399,10 @@ def run(args: argparse.Namespace) -> None:
                 "observations_sha256": file_sha256(observation_path),
             },
             "script_sha256": file_sha256(Path(__file__)),
-            "interpretation_boundary": "Intervals are descriptive within treatment and are not treatment-difference tests.",
+            "interpretation_boundary": (
+                "Intervals are descriptive within treatment and are not treatment-difference tests. "
+                "This is a two-sex cohort lx-mx core analysis, not a full age-stage TWOSEX-MSChart analysis."
+            ),
         },
     )
     print(f"Calculated life-table metrics for {len(groups)} treatment group(s): {output_dir}")
@@ -386,6 +419,15 @@ def main() -> None:
     parser.add_argument("--time-origin-field", default="egg_date", choices=["egg_date", "larva_date", "pupa_date", "adult_emergence_date"])
     parser.add_argument("--time-unit", default="day")
     parser.add_argument("--fecundity-unit", default="confirmed_offspring_count")
+    parser.add_argument(
+        "--confirm-unlisted-fecundity-zero",
+        action="store_true",
+        required=True,
+        help=(
+            "Required acknowledgement that absent individual-age fecundity records are confirmed observed "
+            "or structural zeros rather than missed observations."
+        ),
+    )
     args = parser.parse_args()
     if args.resamples < 0:
         parser.error("--resamples must be non-negative")

@@ -1,6 +1,6 @@
 ---
 name: analyze-insect-fitness
-description: Inspect, map, normalize, route, calculate, and report insect fitness data from XLSX, XLSM, CSV, or TSV files. Use when Codex needs to整理昆虫或寄生蜂原始表格, reconcile wide/long/messy life-history records, propose traceable field mappings, calculate age-stage two-sex demographic metrics such as r, lambda, R0, and T, summarize parasitoid parasitism or host-killing performance, audit replicate and missing-value semantics, or prepare reproducible fitness-analysis outputs. Also trigger on requests mentioning 昆虫适合度、两性生命表、生命表参数、寄生蜂适合度、寄生率、寄主致死率、种群增长率、TWOSEX-MSChart 数据整理, or AI-assisted routing of insect experimental data.
+description: Inspect, map, normalize, route, calculate, and report insect fitness data from XLSX, XLSM, CSV, or TSV files. Use when Codex needs to整理昆虫或寄生蜂原始表格, reconcile wide/long/messy life-history records, propose traceable field mappings, calculate two-sex cohort lx-mx demographic metrics such as r, lambda, R0, and T, prepare data for full age-stage analysis, summarize parasitoid parasitism or host-killing performance, audit replicate and missing-value semantics, or prepare reproducible fitness-analysis outputs. Also trigger on requests mentioning 昆虫适合度、两性生命表、生命表参数、寄生蜂适合度、寄生率、寄主致死率、种群增长率、TWOSEX-MSChart 数据整理, or AI-assisted routing of insect experimental data.
 ---
 
 # Analyze Insect Fitness
@@ -72,7 +72,7 @@ Edit a draft mapping into an explicit JSON contract. Preserve:
 - value dictionaries for treatment, sex, stage, and status;
 - accepted missing tokens;
 - date and numeric fields;
-- wide daily-metric patterns and their time origin;
+- wide daily-metric patterns, their time origin, and the confirmed integer `age_offset` needed to normalize age from zero;
 - repeated-header and duplicate-ID policy.
 
 Never include an ambiguous token in `missing_tokens` merely to make normalization succeed.
@@ -91,11 +91,11 @@ Inspect `individuals.csv`, `observations.csv`, `issues.csv`, and `provenance.jso
 
 ### 6. Route the data
 
-Read [method-selection.md](references/method-selection.md).
+Read [method-selection.md](references/method-selection.md). For demographic formulas, validation, interpretation, or publication-facing reporting, also read [literature-foundation.md](references/literature-foundation.md).
 
 Use these v1 routes:
 
-- Complete cohort plus dated survival/death and age-specific fecundity → two-sex demographic life table.
+- Complete cohort plus dated survival/death and age-specific fecundity → two-sex cohort `lx-mx` core analysis.
 - Adult parasitoid event records with offered/parasitized/killed hosts or sexed offspring → parasitoid performance summary.
 - Only lifetime totals, body size proxies, ambiguous dates, or unresolved replicate structure → descriptive output or request clarification; do not manufacture a life table.
 - Competition frequencies, MPM/IPM, Pool-seq, or genomic selection → report as outside v1 and propose a separate extension.
@@ -109,10 +109,13 @@ python3 scripts/life_table.py \
   --individuals OUTPUT_DIR/canonical/individuals.csv \
   --observations OUTPUT_DIR/canonical/observations.csv \
   --output-dir OUTPUT_DIR/life_table \
+  --confirm-unlisted-fecundity-zero \
   --bootstrap-unit biological_replicate \
   --resamples 10000 \
   --seed 20260826
 ```
+
+Pass `--confirm-unlisted-fecundity-zero` only after confirming that every absent individual-age fecundity record represents an observed or structural zero rather than a missed observation. Without that explicit contract, stop before calculation.
 
 For parasitoid event data:
 
@@ -129,6 +132,10 @@ Parasitoid rates use only observation rows containing every required numerator a
 
 Use individual-level bootstrap only when individuals are the independent experimental units. Use replicate-level bootstrap when cages, blocks, mothers, cohorts, or experimental runs are the independent units.
 
+Call the bundled demographic result a `two-sex cohort lx-mx core analysis`. Do not claim a full age-stage, two-sex analysis or TWOSEX-MSChart equivalence: v1 does not export `s_xj`, `f_xj`, stage overlap, `e_xj`, `v_xj`, stable distributions, or population projections.
+
+Treat intervals for `r`, `lambda`, or `T` as conditional when `ci_scope` says `conditional_on_calculable_resamples`. Report `noncalculable_resamples`; do not hide or impute infertile bootstrap samples. Do not use conditional intervals for treatment inference.
+
 ### 8. Audit and report
 
 Read [statistical-guardrails.md](references/statistical-guardrails.md).
@@ -136,7 +143,7 @@ Read [statistical-guardrails.md](references/statistical-guardrails.md).
 Report:
 
 - sample size and experimental unit;
-- estimate, confidence interval, and bootstrap-calculable fraction;
+- estimate, confidence interval, bootstrap-calculable fraction, noncalculable count, and CI scope;
 - exact fitness definition and time unit;
 - missing, censored, excluded, duplicate, and unresolved records;
 - whether inference is descriptive or supports a treatment comparison;
@@ -181,4 +188,4 @@ Pause before calculation when:
 
 ## Scope boundary
 
-Version 1 supports data intake, canonicalization, cohort demographic metrics, and parasitoid event summaries. Keep matrix population models, competition selection coefficients, genomic time-series inference, density-dependent models, and publication-grade treatment inference outside v1 unless the user explicitly approves an extension.
+Version 1 supports data intake, canonicalization, two-sex cohort `lx-mx` core metrics, and parasitoid event summaries. Keep full age-stage output, matrix population models, competition selection coefficients, genomic time-series inference, density-dependent models, and publication-grade treatment inference outside v1 unless the user explicitly approves an extension.

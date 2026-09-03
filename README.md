@@ -9,7 +9,7 @@
 - 读取并检查 `.xlsx`、`.xlsm`、`.csv`、`.tsv` 原始表格。
 - 识别宽表、长表、重复表头、混合缺失值和中英文列名，生成待确认的映射草案。
 - 标准化为可追踪的 `individuals.csv`、`observations.csv`、`issues.csv` 和 `provenance.json`。
-- 计算完整队列的年龄—阶段两性生命表核心指标：
+- 由完整两性队列的 `lx-mx` 曲线计算核心指标：
   - 内禀增长率 `r`
   - 周限增长率 `lambda`
   - 净增殖率 `R0`
@@ -18,6 +18,8 @@
 - 汇总寄生蜂表现：寄生率、直接致死率、总寄主影响、羽化率和雌性比例。
 - 支持按个体或生物学重复进行 Bootstrap，并保存置信区间、有效重采样比例、参数和随机种子。
 - 在计算前审计 `0` 与缺失值、死亡与删失、实验单位、时间起点和后代定义。
+
+当前 v1 计算两性队列的核心人口学指标，但尚不输出完整年龄—阶段两性分析中的 `s_xj`、`f_xj`、阶段重叠、生命期望或繁殖值，因此不宣称与 TWOSEX-MSChart 功能等价。
 
 ## 安装
 
@@ -109,10 +111,13 @@ python3 scripts/life_table.py \
   --individuals OUTPUT_DIR/canonical/individuals.csv \
   --observations OUTPUT_DIR/canonical/observations.csv \
   --output-dir OUTPUT_DIR/life_table \
+  --confirm-unlisted-fecundity-zero \
   --bootstrap-unit biological_replicate \
   --resamples 10000 \
   --seed 20260826
 ```
+
+`--confirm-unlisted-fecundity-zero` 是强制性的科学语义确认：只有在未列出的“个体 × 年龄”繁殖记录确实代表观察零或结构零，而不是漏测时才能传入。
 
 输出包括 `metrics.csv`、`age_table.csv` 和 `methods.json`。
 
@@ -164,6 +169,7 @@ results/
 - [`references/mapping-contract.md`](references/mapping-contract.md)
 - [`references/method-selection.md`](references/method-selection.md)
 - [`references/statistical-guardrails.md`](references/statistical-guardrails.md)
+- [`references/literature-foundation.md`](references/literature-foundation.md)
 
 ## 项目结构
 
@@ -187,7 +193,7 @@ scripts/parasitoid_metrics.py   寄生蜂表现汇总
 
 - XLSX, XLSM, CSV, and TSV input profiling.
 - Canonical individual and observation records with issue and provenance logs.
-- Cohort age-stage, two-sex metrics: `r`, `lambda`, `R0`, `T`, and doubling time.
+- Two-sex cohort `lx-mx` core metrics: `r`, `lambda`, `R0`, `T`, and doubling time.
 - Parasitoid metrics: parasitism, direct host killing, total host impact, emergence, and female proportion.
 - Individual- or biological-replicate bootstrap with fixed seeds and auditable method metadata.
 
@@ -209,3 +215,5 @@ $analyze-insect-fitness Profile this parasitoid workbook and prepare a mapping p
 The safe workflow is: profile → confirm semantics and mapping → normalize → inspect issues → route → calculate → report. Draft mappings are rejected by the normalizer, missing counts remain missing, and the bootstrap unit must match the independent experimental unit.
 
 Version 1 intentionally excludes censored-survival models, matrix or integral projection models, competition/genomic fitness inference, density-dependent models, and formal between-treatment inference.
+
+It is not yet a full replacement for TWOSEX-MSChart: stage-specific `s_xj`/`f_xj`, life expectancy, reproductive value, stable distributions, and population projection are outside the current implementation.

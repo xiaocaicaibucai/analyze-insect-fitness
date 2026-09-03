@@ -31,6 +31,7 @@ Create one JSON file per source sheet and freeze it before normalization.
       "day_group": "day"
     }
   ],
+  "age_offset": -1,
   "value_maps": {
     "sex": {
       "F": "female",
@@ -77,6 +78,7 @@ Create one JSON file per source sheet and freeze it before normalization.
   "date_fields": ["observation_date"],
   "numeric_fields": ["age", "hosts_offered", "parasitized", "host_killed", "female_offspring", "male_offspring"],
   "age_origin": "adult",
+  "age_offset": 0,
   "exclude_repeated_header": true
 }
 ```
@@ -90,4 +92,5 @@ Create one JSON file per source sheet and freeze it before normalization.
 - List all numeric canonical fields in `numeric_fields`. Negative counts are errors.
 - List date fields in `date_fields`. Supply `default_year` only when the year is known from study metadata.
 - Use named regex groups for wide metrics. The default examples use `day`.
+- Set `age_offset` explicitly after confirming the source convention. Use `-1` only when source `day 1` denotes the first interval and must become canonical age `0`; use `0` when the source is already zero-based or records true completed age. Wide-metric specifications may override the sheet-level offset.
 - Do not combine female and male offspring into one value unless the source definition explicitly supports it.

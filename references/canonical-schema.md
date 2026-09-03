@@ -35,12 +35,12 @@ One row represents one observation interval for one focal insect.
 | `treatment` | Confirmed treatment |
 | `biological_replicate` | Confirmed independent unit |
 | `observation_date` | Observation date when available |
-| `age` | Numeric age or interval index |
+| `age` | Zero-based numeric age or interval index after the confirmed source-to-canonical offset |
 | `age_origin` | `cohort`, `egg`, `larva`, `pupa`, `adult`, or explicit custom origin |
 | `stage` | Stage at observation |
 | `sex` | Sex at observation when known |
 | `alive` | `yes`, `no`, or empty when not assessed |
-| `fecundity` | Eggs or offspring count, using the confirmed definition |
+| `fecundity` | Offspring produced by the focal reproductive parent during this parent's age interval, using the confirmed offspring definition |
 | `hosts_offered` | Hosts made available during the interval |
 | `parasitized` | Hosts confirmed parasitized |
 | `host_killed` | Hosts killed without double-counting `parasitized` |
@@ -53,6 +53,8 @@ One row represents one observation interval for one focal insect.
 | `source_column` | Source column for wide-to-long records; empty for event-long records |
 
 Store counts as non-negative numeric values. Leave unresolved values empty and record them in `issues.csv`; never store symbols such as `-`, `NA`, or `未统计` in numeric canonical fields.
+
+Preserve the original day label in source provenance. A source field called `day 1` is not automatically canonical age `1`: confirm whether it represents the first interval after cohort entry (canonical age `0`) or true completed age `1`, then record the transformation in the mapping contract.
 
 ## `issues.csv`
 

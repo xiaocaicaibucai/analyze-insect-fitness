@@ -265,6 +265,10 @@ def normalize(input_file: Path, mapping_path: Path, output_dir: Path) -> int:
     layout = mapping.get("layout")
     if layout not in {"wide_cohort", "event_long"}:
         raise ValueError(f"Layout {layout!r} is not supported by the v1 normalizer.")
+    try:
+        age_offset = int(mapping.get("age_offset", 0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("age_offset must be an integer.") from exc
     wide_specs: list[tuple[dict[str, Any], re.Pattern[str], list[tuple[str, re.Match[str]]]]] = []
     for spec in mapping.get("wide_metrics", []):
         pattern = re.compile(spec["source_pattern"])
@@ -376,6 +380,38 @@ def normalize(input_file: Path, mapping_path: Path, output_dir: Path) -> int:
                 "source_column": "",
             }
         )
+        if base_observation.get("age") not in ("", None):
+            raw_age = base_observation["age"]
+            if not isinstance(raw_age, (int, float)) or isinstance(raw_age, bool):
+                add_issue(
+                    issues,
+                    "error",
+                    "age_not_numeric",
+                    "Canonical age must be numeric before applying age_offset.",
+                    sheet,
+                    offset,
+                    columns.get("age", ""),
+                    raw_age,
+                    "Add age to numeric_fields and confirm age_offset.",
+                )
+                base_observation["age"] = ""
+            else:
+                adjusted_age = raw_age + age_offset
+                if adjusted_age < 0:
+                    add_issue(
+                        issues,
+                        "error",
+                        "negative_normalized_age",
+                        "Applying age_offset produced a negative canonical age.",
+                        sheet,
+                        offset,
+                        columns.get("age", ""),
+                        raw_age,
+                        "Confirm the source day convention and age_offset.",
+                    )
+                    base_observation["age"] = ""
+                else:
+                    base_observation["age"] = adjusted_age
 
         if layout == "event_long":
             if any(base_observation.get(field) not in ("", None) for field in OBSERVATION_DATA_FIELDS):
@@ -401,8 +437,9 @@ def normalize(input_file: Path, mapping_path: Path, output_dir: Path) -> int:
                     if value == "":
                         continue
                     try:
-                        age: Any = int(match.group(day_group))
-                    except (IndexError, ValueError):
+                        spec_age_offset = int(spec.get("age_offset", age_offset))
+                        age: Any = int(match.group(day_group)) + spec_age_offset
+                    except (IndexError, TypeError, ValueError):
                         add_issue(
                             issues,
                             "error",
@@ -412,6 +449,19 @@ def normalize(input_file: Path, mapping_path: Path, output_dir: Path) -> int:
                             offset,
                             source,
                             match.groupdict(),
+                        )
+                        continue
+                    if age < 0:
+                        add_issue(
+                            issues,
+                            "error",
+                            "negative_normalized_age",
+                            "Applying age_offset produced a negative canonical age.",
+                            sheet,
+                            offset,
+                            source,
+                            match.group(day_group),
+                            "Confirm the source day convention and age_offset.",
                         )
                         continue
                     observation = dict(base_observation)

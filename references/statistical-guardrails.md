@@ -6,6 +6,8 @@ Identify the unit independently assigned to treatment. Individuals sharing a mot
 
 Bootstrap the independent unit. Never bootstrap offspring as independent replicates of their mother.
 
+Resample a complete individual or cluster history. Never resample daily rows independently because doing so breaks within-individual survival and reproduction dependence.
+
 ## Missingness and censoring
 
 Keep these states distinct:
@@ -25,6 +27,10 @@ The v1 life-table script requires complete death endpoints. Route censoring to a
 ## Bootstrap interpretation
 
 Report the number of requested resamples, seed, resampling unit, and calculable fraction. Some resamples can contain no reproductive individual, so `r` and `T` have no finite estimate. Do not silently omit this fact.
+
+Prefer bootstrap to jackknife for nonlinear life-table parameters. For final reporting, check whether interval limits are stable at increasing resample counts; 100,000 is common in the TWOSEX-MSChart literature but is not a substitute for checking the design and sampling unit.
+
+When any results are noncalculable, report `noncalculable_resamples` and `ci_scope`. An interval based only on finite results is conditional on calculable samples. If that fraction is scientifically consequential, do not use the interval for treatment inference; review cohort size, preadult mortality, reproductive success, and the chosen method.
 
 Intervals from separate treatment groups are descriptive. Their overlap or non-overlap is not a treatment-difference test.
 
@@ -48,4 +54,5 @@ Always report:
 - error and warning counts;
 - software version or script checksum;
 - random seed;
+- noncalculable bootstrap count and CI scope;
 - conclusion boundary.

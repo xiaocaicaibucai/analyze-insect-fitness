@@ -342,7 +342,7 @@ def profile_sheet(
 
     if wide_families and {"individual_id", "treatment", "sex", "death_date"}.issubset(available) and bool(available & {"egg_date", "adult_emergence_date"}):
         layout = "wide_cohort"
-        route = "cohort_life_table_candidate"
+        route = "two_sex_cohort_lx_mx_core_candidate"
     elif has_event_metric and has_event_time and {"individual_id", "treatment"}.issubset(available):
         layout = "event_long"
         route = "parasitoid_event_candidate"
@@ -367,6 +367,7 @@ def profile_sheet(
         "date_fields": sorted(field for field in proposed_columns if field in DATE_FIELDS),
         "numeric_fields": sorted(field for field in proposed_columns if field in NUMERIC_FIELDS),
         "age_origin": "CONFIRM",
+        "age_offset": "CONFIRM_integer_offset" if wide_families or "age" in proposed_columns else 0,
         "exclude_repeated_header": True,
         "blocking_review_required": blocking,
     }

@@ -255,6 +255,10 @@ def run(args: argparse.Namespace) -> None:
         output_dir / "methods.json",
         {
             "analysis": "parasitoid_event_performance_summary",
+            "implementation_scope": (
+                "Descriptive pooled event rates and per-individual totals. This is not a survival-weighted "
+                "net predation/parasitism rate or a CONSUME-MSChart analysis."
+            ),
             "missing_value_rule": "Missing counts remain missing; rates use only rows with every required numerator and denominator.",
             "bootstrap_unit": args.bootstrap_unit,
             "requested_resamples": args.resamples,
@@ -267,6 +271,10 @@ def run(args: argparse.Namespace) -> None:
                 "emergence_rate": "sum(female_offspring + male_offspring) / sum(parasitized) over complete records",
                 "female_fraction": "sum(female_offspring) / sum(all sexed offspring) over complete records",
             },
+            "literature_basis": [
+                "https://doi.org/10.1603/0046-225X-35.1.10",
+                "https://doi.org/10.1603/0046-225X-32.2.327",
+            ],
             "input": str(observation_path),
             "input_sha256": file_sha256(observation_path),
             "script_sha256": file_sha256(Path(__file__)),
